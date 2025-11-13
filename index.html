@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Data Karyawan - CRUD via Web App</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin:auto; }
+    table { border-collapse: collapse; width:100%; margin-top:12px;}
+    th, td { border:1px solid #ddd; padding:8px; }
+    th { background:#f5f5f5; }
+    input, button { padding:6px; margin:4px 0; }
+    .form-row { display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <h1>Data Karyawan</h1>
+
+  <div id="controls">
+    <button id="refreshBtn">Refresh</button>
+  </div>
+
+  <table id="tbl">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Tambah Karyawan</h3>
+  <div id="formAdd">
+    <div class="form-row">
+      <input id="nama" placeholder="Nama" />
+      <input id="jabatan" placeholder="Jabatan" />
+      <input id="departemen" placeholder="Departemen" />
+      <input id="email" placeholder="Email" />
+      <button id="addBtn">Tambah</button>
+    </div>
+  </div>
+
+  <script>
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyz0LYthW_UIAGPjWs5LnLqTm8AGrti9BXxJIsdUyE9YERpl5ULnhurKUiEpY3QVLhz/exec';
+    const TOKEN = '123456789'; // harus sama dengan SECRET_TOKEN di Apps Script
+
+    async function fetchData() {
+      try {
+        const res = await fetch(WEB_APP_URL + '?action=get');
+        const json = await res.json();
+        if (json.status !== 'ok') throw new Error(json.message || 'Error');
+        renderTable(json.data);
+      } catch (err) {
+        console.error(err);
+        alert('Gagal mengambil data: ' + err.message);
+      }
+    }
+
+    function renderTable(rows) {
+      const thead = document.querySelector('#tbl thead');
+      const tbody = document.querySelector('#tbl tbody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      if (!rows.length) {
+        thead.innerHTML = '<tr><th>No data</th></tr>';
+        return;
+      }
+
+      // build header from object keys
+      const keys = Object.keys(rows[0]);
+      thead.innerHTML = '<tr>' + keys.map(k => `<th>${k}</th>`).join('') + '<th>Actions</th></tr>';
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = keys.map(k => `<td>${r[k] || ''}</td>`).join('') +
+          `<td>
+            <button class="editBtn" data-id="${r.ID}">Edit</button>
+            <button class="delBtn" data-id="${r.ID}">Delete</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      // attach handlers
+      document.querySelectorAll('.delBtn').forEach(b => b.addEventListener('click', onDelete));
+      document.querySelectorAll('.editBtn').forEach(b => b.addEventListener('click', onEdit));
+    }
+
+    async function onAdd() {
+      const data = {
+        Nama: document.getElementById('nama').value,
+        Jabatan: document.getElementById('jabatan').value,
+        Departemen: document.getElementById('departemen').value,
+        Email: document.getElementById('email').value
+      };
+      try {
+        const res = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', token: TOKEN, data })
+        });
+        const json = await res.json();
+        if (json.status !== 'ok') throw new Error(json.message || 'Gagal membuat');
+        alert('Berhasil menambah ID ' + json.id);
+        clearForm();
+        fetchData();
+      } catch (err) {
+        console.error(err);
+        alert('Gagal tambah: ' + err.message);
+      }
+    }
+
+    async function onDelete(e) {
+      const id = e.target.dataset.id;
+      if (!confirm('Hapus ID ' + id + '?')) return;
+      try {
+        const res = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', token: TOKEN, id })
+        });
+        const json = await res.json();
+        if (json.status !== 'ok') throw new Error(json.message || 'Gagal hapus');
+        alert('Terhapus: ' + id);
+        fetchData();
+      } catch (err) {
+        console.error(err);
+        alert('Gagal hapus: ' + err.message);
+      }
+    }
+
+    async function onEdit(e) {
+      const id = e.target.dataset.id;
+      // simple prompt-based edit (bisa diganti modal form)
+      const newNama = prompt('Nama baru:');
+      if (newNama === null) return;
+      const newJabatan = prompt('Jabatan baru:');
+      const newDepartemen = prompt('Departemen baru:');
+      const newEmail = prompt('Email baru:');
+      const data = { Nama: newNama, Jabatan: newJabatan, Departemen: newDepartemen, Email: newEmail };
+      try {
+        const res = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update', token: TOKEN, id, data })
+        });
+        const json = await res.json();
+        if (json.status !== 'ok') throw new Error(json.message || 'Gagal update');
+        alert('Terupdate: ' + id);
+        fetchData();
+      } catch (err) {
+        console.error(err);
+        alert('Gagal update: ' + err.message);
+      }
+    }
+
+    function clearForm() {
+      ['nama','jabatan','departemen','email'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    document.getElementById('addBtn').addEventListener('click', onAdd);
+    document.getElementById('refreshBtn').addEventListener('click', fetchData);
+
+    // initial load
+    fetchData();
+  </script>
+</body>
+</html>
