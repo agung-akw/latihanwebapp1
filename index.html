@@ -71,8 +71,8 @@
         const tr = document.createElement('tr');
         tr.innerHTML = keys.map(k => `<td>${r[k] || ''}</td>`).join('') +
           `<td>
-            <button class="editBtn" data-id="${r.ID}">Edit</button>
-            <button class="delBtn" data-id="${r.ID}">Delete</button>
+            <button class="editBtn" data-id="${r.id}">Edit</button>
+            <button class="delBtn" data-id="${r.id}">Delete</button>
           </td>`;
         tbody.appendChild(tr);
       });
